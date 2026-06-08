@@ -1,0 +1,146 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Palet Warna Kustom */
+  --bg-darkest: #15090b;       /* Background utama aplikasi - Sangat gelap keunguan */
+  --bg-card: #4F252E;          /* Background Card / Element - Plum/Burgundy */
+  --bg-card-hover: #5d2b37;    /* Hover State untuk Card */
+  --accent: #24B1B1;           /* Accent Color - Vibrant Teal */
+  --accent-hover: #2cc9c9;     /* Accent Hover Color */
+  --text-light: #FFE3E3;       /* Teks Utama - Soft Pinkish White */
+  --text-muted: #d0abb2;       /* Teks Sekunder - Muted Pinkish Purple */
+  --border-light: rgba(255, 227, 227, 0.15); /* Border halus */
+  --sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+}
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  background-color: var(--bg-darkest);
+  color: var(--text-light);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-darkest);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-card);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(79, 37, 46, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+}
+
+/* Glass header */
+.glass-header {
+  background: rgba(21, 9, 11, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* Micro-animations */
+.hover-scale {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.hover-scale:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(36, 177, 177, 0.25);
+}
+
+/* Active links */
+.active-nav-link {
+  color: var(--accent) !important;
+  font-weight: 600;
+}
+
+/* Custom Buttons */
+.btn-primary {
+  background-color: var(--accent);
+  color: var(--bg-darkest);
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: all 0.2s ease;
+}
+.btn-primary:hover {
+  background-color: var(--accent-hover);
+  transform: translateY(-1px);
+}
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--text-light);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: all 0.2s ease;
+}
+.btn-secondary:hover {
+  background-color: rgba(255, 227, 227, 0.05);
+}
+
+/* Form inputs styling */
+.form-input {
+  background-color: rgba(21, 9, 11, 0.6);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  color: var(--text-light);
+  font-family: var(--sans);
+  padding: 12px 16px;
+  transition: border-color 0.2s ease;
+}
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Reset Link Styles */
+a {
+  color: inherit;
+  text-decoration: none;
+}
