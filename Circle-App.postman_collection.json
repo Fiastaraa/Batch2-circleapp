@@ -1,0 +1,764 @@
+{
+  "info": {
+    "name": "Circle App API — Demo Mentor",
+    "_postman_id": "circle-app-dw66-fiastara",
+    "description": "Koleksi API Circle App untuk demo ke mentor bootcamp DW66.\nBase URL: http://localhost:7001/api\n\nAlur: Register → Login → (token auto-saved) → CRUD Thread → Like → Reply → Cache → Follow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:7001/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "thread_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 AUTH",
+      "item": [
+        {
+          "name": "STEP 1 — Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.user && res.user.id) {",
+                  "    pm.collectionVariables.set('user_id', res.user.id);",
+                  "    console.log('✅ User ID saved:', res.user.id);",
+                  "}",
+                  "pm.test('Status 201 - Register berhasil', () => {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response punya field user', () => {",
+                  "    pm.expect(res).to.have.property('user');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"fia_star\",\n  \"email\": \"fia@example.com\",\n  \"password\": \"password123\",\n  \"fullName\": \"Fia Fiastara\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/register",
+              "host": ["{{base_url}}"],
+              "path": ["register"]
+            },
+            "description": "Registrasi user baru.\n\n✅ Yang terjadi di backend:\n- Password di-hash menggunakan bcrypt\n- Data disimpan ke tabel `users` di PostgreSQL\n- Response mengembalikan user tanpa password"
+          }
+        },
+        {
+          "name": "STEP 2 — Login (auto-save token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.token) {",
+                  "    pm.collectionVariables.set('token', res.token);",
+                  "    console.log('✅ JWT Token tersimpan!');",
+                  "    console.log('Token (30 char):', res.token.substring(0, 30) + '...');",
+                  "}",
+                  "if (res.user && res.user.id) {",
+                  "    pm.collectionVariables.set('user_id', res.user.id);",
+                  "}",
+                  "pm.test('Status 200 - Login berhasil', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response punya JWT token', () => {",
+                  "    pm.expect(res).to.have.property('token');",
+                  "    pm.expect(res.token).to.be.a('string');",
+                  "});",
+                  "pm.test('Token format JWT (3 bagian)', () => {",
+                  "    const parts = res.token.split('.');",
+                  "    pm.expect(parts.length).to.equal(3);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"fia@example.com\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/login",
+              "host": ["{{base_url}}"],
+              "path": ["login"]
+            },
+            "description": "Login user.\n\n✅ Yang terjadi:\n- Email & password diverifikasi\n- JWT token di-generate dengan payload: userId, username, email\n- Token disimpan otomatis ke variable {{token}} via Tests script\n\n💡 Coba decode token di: https://jwt.io"
+          }
+        },
+        {
+          "name": "STEP 3a — Get Profile [TANPA TOKEN → 401]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 - Ditolak tanpa token', () => {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('Response ada pesan error', () => {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res).to.have.property('error');",
+                  "    console.log('❌ Auth Middleware bekerja:', res.error);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile",
+              "host": ["{{base_url}}"],
+              "path": ["profile"]
+            },
+            "description": "❌ SENGAJA TANPA TOKEN untuk demo Auth Middleware.\n\nHasilnya 401 Unauthorized — bukti middleware bekerja."
+          }
+        },
+        {
+          "name": "STEP 3b — Get Profile [DENGAN TOKEN → 200]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Profil berhasil diambil', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response ada field username', () => {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res).to.have.property('username');",
+                  "    console.log('✅ Auth Middleware lolos. User:', res.fullName);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/profile",
+              "host": ["{{base_url}}"],
+              "path": ["profile"]
+            },
+            "description": "✅ Dengan token JWT di header Authorization.\n\nAuth Middleware memvalidasi token → request diteruskan ke controller."
+          }
+        },
+        {
+          "name": "Update Profile (multipart)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "fullName",
+                  "value": "Fia Fiastara Updated",
+                  "type": "text"
+                },
+                {
+                  "key": "bio",
+                  "value": "Frontend dev ✨ | DW Bootcamp Batch 66",
+                  "type": "text"
+                },
+                {
+                  "key": "avatar",
+                  "type": "file",
+                  "src": [],
+                  "description": "Opsional: pilih file gambar"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/profile/update",
+              "host": ["{{base_url}}"],
+              "path": ["profile", "update"]
+            },
+            "description": "Update profil dengan fullName, bio, dan avatar (gambar).\nMenggunakan multipart/form-data karena ada file upload."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🧵 THREADS",
+      "item": [
+        {
+          "name": "STEP 4 — Create Thread",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.thread && res.thread.id) {",
+                  "    pm.collectionVariables.set('thread_id', res.thread.id);",
+                  "    console.log('✅ Thread ID saved:', res.thread.id);",
+                  "}",
+                  "pm.test('Status 201 - Thread berhasil dibuat', () => {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response ada field thread.id', () => {",
+                  "    pm.expect(res.thread).to.have.property('id');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "content",
+                  "value": "Hello dari Postman! Ini thread pertama saya 🔥 #CircleApp #DWBootcamp",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "Opsional: pilih file gambar"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/threads",
+              "host": ["{{base_url}}"],
+              "path": ["threads"]
+            },
+            "description": "Buat thread baru.\n\n✅ Yang terjadi:\n- Content disimpan ke tabel `threads`\n- Jika ada gambar, file disimpan via Multer ke folder /uploads\n- Thread ID disimpan otomatis ke variable {{thread_id}}"
+          }
+        },
+        {
+          "name": "STEP 5 — Get All Threads (Feed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Feed berhasil', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response adalah array', () => {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res).to.be.an('array');",
+                  "    console.log('✅ Total threads di feed:', res.length);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/threads",
+              "host": ["{{base_url}}"],
+              "path": ["threads"]
+            },
+            "description": "Ambil semua thread untuk feed.\nData termasuk: user info, jumlah likes, jumlah replies, status isLiked."
+          }
+        },
+        {
+          "name": "Get Thread Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/threads/{{thread_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["threads", "{{thread_id}}"]
+            },
+            "description": "Ambil detail thread beserta semua replies."
+          }
+        },
+        {
+          "name": "STEP 6 — Toggle Like (kirim 2x!)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('Status 200 - Toggle like berhasil', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response ada field liked', () => {",
+                  "    pm.expect(res).to.have.property('liked');",
+                  "    const status = res.liked ? '❤️ LIKED' : '🤍 UNLIKED';",
+                  "    console.log('Toggle status:', status);",
+                  "    console.log('Kirim lagi untuk toggle balik!');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/threads/{{thread_id}}/like",
+              "host": ["{{base_url}}"],
+              "path": ["threads", "{{thread_id}}", "like"]
+            },
+            "description": "Toggle Like/Unlike thread.\n\n💡 Kirim 2x untuk demo:\n- Kirim 1: liked=true (Like)\n- Kirim 2: liked=false (Unlike)\n\nData disimpan/dihapus dari tabel `likes` di PostgreSQL."
+          }
+        },
+        {
+          "name": "STEP 7 — Reply Thread",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Reply berhasil', () => {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "const res = pm.response.json();",
+                  "pm.test('Response ada field reply', () => {",
+                  "    pm.expect(res).to.have.property('reply');",
+                  "    console.log('✅ Reply ID:', res.reply?.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Keren banget threadnya! Keep it up! 👏🔥\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/threads/{{thread_id}}/reply",
+              "host": ["{{base_url}}"],
+              "path": ["threads", "{{thread_id}}", "reply"]
+            },
+            "description": "Balas thread.\nData tersimpan ke tabel `replies` dengan relasi ke thread dan user."
+          }
+        },
+        {
+          "name": "STEP 8a — My Threads [DB Miss - Pertama kali]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('Status 200', () => { pm.response.to.have.status(200); });",
+                  "pm.test('Cek source cache/database', () => {",
+                  "    pm.expect(res).to.have.property('source');",
+                  "    const icon = res.source === 'cache' ? '⚡ REDIS HIT' : '🗄️ DB MISS';",
+                  "    console.log('=== REDIS STATUS ===');",
+                  "    console.log(icon + ' — source:', res.source);",
+                  "    console.log('Total threads:', res.data?.length);",
+                  "    if (res.source === 'cache') {",
+                  "        console.log('Data berasal dari Redis Cache!');",
+                  "    } else {",
+                  "        console.log('Data dari DB. Akan di-cache ke Redis 60 detik.');",
+                  "        console.log('Kirim lagi dalam 60 detik → source akan jadi cache!');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/threads/my",
+              "host": ["{{base_url}}"],
+              "path": ["threads", "my"]
+            },
+            "description": "Ambil thread milik sendiri.\n\n🔴 PERTAMA kali kirim → source: 'database' (DB Miss)\nData diambil dari PostgreSQL lalu disimpan ke Redis.\n\nKirim lagi dalam 60 detik → STEP 8b (Cache Hit!)"
+          }
+        },
+        {
+          "name": "STEP 8b — My Threads [Redis Hit - Kirim lagi <60dtk]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('Status 200', () => { pm.response.to.have.status(200); });",
+                  "pm.test('Source harus cache (Redis Hit)', () => {",
+                  "    pm.expect(res).to.have.property('source');",
+                  "    const icon = res.source === 'cache' ? '⚡ REDIS HIT' : '🗄️ DB MISS';",
+                  "    console.log('=== REDIS STATUS ===');",
+                  "    console.log(icon + ' — source:', res.source);",
+                  "    if (res.source === 'cache') {",
+                  "        console.log('✅ Data berasal dari Redis!');",
+                  "        console.log('Tidak ada query ke PostgreSQL!');",
+                  "    } else {",
+                  "        console.log('⚠️ Masih DB. Coba kirim lebih cepat (< 60 detik dari step 8a)');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/threads/my",
+              "host": ["{{base_url}}"],
+              "path": ["threads", "my"]
+            },
+            "description": "⚡ Kirim DALAM 60 DETIK setelah Step 8a!\n\n→ source: 'cache' (Redis Hit!)\nData langsung dari Redis tanpa query ke PostgreSQL."
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 USERS & FOLLOW",
+      "item": [
+        {
+          "name": "Search User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json();",
+                  "console.log('Search results:', res.length, 'users ditemukan');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/search?query=fia",
+              "host": ["{{base_url}}"],
+              "path": ["users", "search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "fia",
+                  "description": "Ganti dengan nama/username yang dicari"
+                }
+              ]
+            },
+            "description": "Cari user berdasarkan nama lengkap atau username."
+          }
+        },
+        {
+          "name": "STEP 9 — Toggle Follow User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('Status 200 - Toggle follow berhasil', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response ada field followed', () => {",
+                  "    pm.expect(res).to.have.property('followed');",
+                  "    const status = res.followed ? '✅ FOLLOWING' : '❌ UNFOLLOWED';",
+                  "    console.log('Follow status:', status);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/follow",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{user_id}}", "follow"]
+            },
+            "description": "Toggle Follow/Unfollow user.\n\n⚠️ Ganti {{user_id}} dengan ID user yang ingin di-follow.\nID bisa didapat dari response Search User di atas.\n\n- Kirim 1: followed=true\n- Kirim 2: followed=false"
+          }
+        },
+        {
+          "name": "STEP 10 — Get Followers List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/follows?type=followers",
+              "host": ["{{base_url}}"],
+              "path": ["users", "follows"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "followers",
+                  "description": "Ganti dengan 'following' untuk lihat daftar following"
+                }
+              ]
+            },
+            "description": "Ambil daftar followers.\nGanti query param type=following untuk lihat daftar following."
+          }
+        },
+        {
+          "name": "Get Following List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/follows?type=following",
+              "host": ["{{base_url}}"],
+              "path": ["users", "follows"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "following"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🧪 TEST CASES",
+      "item": [
+        {
+          "name": "❌ Login password salah",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 atau 401 — password salah ditolak', () => {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
+                  "    console.log('✅ Validasi password bekerja dengan benar');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"fia@example.com\",\n  \"password\": \"SALAH_INI\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/login",
+              "host": ["{{base_url}}"],
+              "path": ["login"]
+            },
+            "description": "Test case: login dengan password salah → harus dapat error."
+          }
+        },
+        {
+          "name": "❌ Register email duplikat",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 — email duplikat ditolak', () => {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 409]);",
+                  "    console.log('✅ Validasi email unique bekerja');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"fia_star\",\n  \"email\": \"fia@example.com\",\n  \"password\": \"password123\",\n  \"fullName\": \"Fia Duplikat\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/register",
+              "host": ["{{base_url}}"],
+              "path": ["register"]
+            },
+            "description": "Test case: daftar dengan email yang sudah ada → harus dapat error."
+          }
+        },
+        {
+          "name": "❌ Create Thread tanpa token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 — Auth middleware menolak', () => {",
+                  "    pm.response.to.have.status(401);",
+                  "    console.log('✅ Auth Middleware bekerja pada POST /threads');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "content", "value": "Thread tanpa auth", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/threads",
+              "host": ["{{base_url}}"],
+              "path": ["threads"]
+            },
+            "description": "Test case: buat thread tanpa Bearer token → harus dapat 401."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -4,20 +4,21 @@ import { setThreads, addThread, fetchStart, fetchFailure } from '../store/thread
 import api from '../services/api';
 import ThreadCard from '../components/ThreadCard';
 import io from 'socket.io-client';
-import { ImageIcon, Send, X } from 'lucide-react';
+import { ImageIcon, X, Send, Flame } from 'lucide-react';
 
 export default function Home() {
-  const dispatch = useDispatch();
-  const fileInputRef = useRef(null);
-
-  const { user } = useSelector((state) => state.auth);
+  const dispatch       = useDispatch();
+  const fileInputRef   = useRef(null);
+  const { user }       = useSelector((state) => state.auth);
   const { threads, loading } = useSelector((state) => state.threads);
 
-  const [content, setContent] = useState('');
+  const [content, setContent]           = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [imagePreview, setImagePreview]   = useState(null);
+  const [submitting, setSubmitting]       = useState(false);
+  const [newCount, setNewCount]           = useState(0);
 
+  // ── Fetch feed ────────────────────────────────────────────────────────────
   const fetchFeed = async () => {
     dispatch(fetchStart());
     try {
@@ -28,114 +29,123 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    fetchFeed();
-  }, []);
+  useEffect(() => { fetchFeed(); }, []);
 
+  // ── WebSocket for real-time new threads ──────────────────────────────────
   useEffect(() => {
     const socket = io('http://localhost:7001');
-
     socket.on('threadCreated', (newThread) => {
-      console.log('[WebSocket Client] Thread baru dideteksi:', newThread);
       dispatch((dispatchState, getState) => {
-        const currentThreads = getState().threads.threads;
-        const exists = currentThreads.some((t) => t.id === newThread.id);
-        if (!exists) {
+        const current = getState().threads.threads;
+        if (!current.some((t) => t.id === newThread.id)) {
           dispatchState(addThread(newThread));
+          setNewCount((c) => c + 1);
         }
       });
     });
-
-    return () => {
-      socket.disconnect();
-    };
+    return () => socket.disconnect();
   }, []);
 
+  // ── Image handling ───────────────────────────────────────────────────────
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setSelectedImage(file);
-      setImagePreview(URL.createObjectURL(file));
-    }
+    if (!file) return;
+    setSelectedImage(file);
+    setImagePreview(URL.createObjectURL(file));
   };
 
   const handleRemoveImage = () => {
     setSelectedImage(null);
     setImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // ── Submit thread ─────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!content.trim() && !selectedImage) {
-      alert('Thread tidak boleh kosong!');
-      return;
-    }
+    if (!content.trim() && !selectedImage) return;
 
     setSubmitting(true);
     try {
       const formData = new FormData();
       formData.append('content', content);
-      if (selectedImage) {
-        formData.append('image', selectedImage);
-      }
+      if (selectedImage) formData.append('image', selectedImage);
 
       const res = await api.post('/threads', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-
       dispatch(addThread(res.data.thread));
       setContent('');
       handleRemoveImage();
+      setNewCount(0);
     } catch (err) {
-      console.error(err);
       alert(err.response?.data?.error || 'Gagal memposting thread.');
     } finally {
       setSubmitting(false);
     }
   };
 
+  const avatarSrc = user?.avatar
+    ? `http://localhost:7001${user.avatar}`
+    : `https://api.dicebear.com/7.x/initials/svg?seed=${user?.fullName}`;
+
   return (
-    <div style={{ width: '100%', backgroundColor: '#15090b', minHeight: '100vh' }}>
-      {/* Header */}
-      <div className="glass-header" style={{ padding: '16px 24px', textAlign: 'left' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-light)', margin: 0 }}>
-          Home
-        </h2>
+    <div style={{ width: '100%', minHeight: '100vh', backgroundColor: 'var(--bg-darkest)' }}>
+
+      {/* ── Header ── */}
+      <div className="glass-header" style={{ padding: '16px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Flame size={20} color="var(--accent)" fill="var(--accent)" />
+            <h2 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text-light)', margin: 0, letterSpacing: '-0.3px' }}>
+              For You
+            </h2>
+          </div>
+          {newCount > 0 && (
+            <button
+              onClick={() => { setNewCount(0); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              style={{
+                padding: '5px 12px',
+                borderRadius: 'var(--radius-pill)',
+                backgroundColor: 'var(--primary)',
+                color: 'var(--text-light)',
+                border: 'none',
+                fontSize: '12px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                fontFamily: 'var(--sans)',
+                animation: 'fadeIn 0.3s ease',
+              }}
+            >
+              {newCount} new post{newCount > 1 ? 's' : ''}
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Post creator form */}
+      {/* ── Compose area ── */}
       {user && (
-        <div
-          style={{
-            padding: '24px',
-            borderBottom: '1px solid var(--border-light)',
-            backgroundColor: 'rgba(79, 37, 46, 0.1)',
-          }}
-        >
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid var(--border)',
+        }}>
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+              {/* Avatar */}
               <img
-                src={user.avatar ? `http://localhost:7001${user.avatar}` : `https://api.dicebear.com/7.x/initials/svg?seed=${user.fullName}`}
+                src={avatarSrc}
                 alt={user.fullName}
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '1.5px solid var(--accent)',
-                  backgroundColor: 'var(--accent)',
-                }}
+                className="avatar-ring"
+                style={{ width: '38px', height: '38px', flexShrink: 0, marginTop: '2px' }}
               />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
+
+              {/* Input area */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Apa yang sedang terjadi hari ini?"
+                  placeholder="What's on your mind?"
+                  rows={content.length > 80 ? 4 : 2}
                   style={{
                     width: '100%',
                     backgroundColor: 'transparent',
@@ -145,35 +155,24 @@ export default function Home() {
                     fontFamily: 'var(--sans)',
                     outline: 'none',
                     resize: 'none',
-                    minHeight: '60px',
+                    lineHeight: '1.5',
+                    placeholder: 'color: var(--text-muted)',
                   }}
                 />
 
-                {/* Image Preview */}
+                {/* Image preview */}
                 {imagePreview && (
-                  <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', maxHeight: '250px', width: '100%' }}>
-                    <img
-                      src={imagePreview}
-                      alt="Upload preview"
-                      style={{ width: '100%', maxHeight: '250px', objectFit: 'cover' }}
-                    />
+                  <div style={{ position: 'relative', borderRadius: 'var(--radius-md)', overflow: 'hidden', maxHeight: '280px' }}>
+                    <img src={imagePreview} alt="Preview" style={{ width: '100%', maxHeight: '280px', objectFit: 'cover' }} />
                     <button
                       type="button"
                       onClick={handleRemoveImage}
                       style={{
-                        position: 'absolute',
-                        top: '8px',
-                        right: '8px',
-                        backgroundColor: 'rgba(0,0,0,0.6)',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '28px',
-                        height: '28px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        color: 'white',
+                        position: 'absolute', top: '8px', right: '8px',
+                        backgroundColor: 'rgba(0,0,0,0.7)', border: 'none',
+                        borderRadius: '50%', width: '28px', height: '28px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', color: 'white',
                       }}
                     >
                       <X size={14} />
@@ -181,19 +180,14 @@ export default function Home() {
                   </div>
                 )}
 
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingTop: '12px',
-                    borderTop: '1px solid rgba(255, 227, 227, 0.05)',
-                  }}
-                >
-                  <div>
+                {/* Action row */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  paddingTop: '8px', borderTop: '1px solid var(--border)',
+                }}>
+                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                     <input
-                      type="file"
-                      accept="image/*"
+                      type="file" accept="image/*"
                       ref={fileInputRef}
                       style={{ display: 'none' }}
                       onChange={handleImageChange}
@@ -201,37 +195,27 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      style={{
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '36px',
-                        height: '36px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(36, 177, 177, 0.1)'}
-                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      className="btn-ghost"
+                      style={{ color: 'var(--accent)', padding: '6px 8px' }}
+                      data-tooltip="Add image"
                     >
-                      <ImageIcon size={20} color="var(--accent)" />
+                      <ImageIcon size={18} />
                     </button>
+                    <span style={{ fontSize: '13px', color: 'var(--text-faint)' }}>
+                      {content.length > 0 && `${content.length} chars`}
+                    </span>
                   </div>
+
                   <button
+                    id="post-thread-btn"
                     type="submit"
-                    disabled={submitting}
+                    disabled={submitting || (!content.trim() && !selectedImage)}
                     className="btn-primary"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 16px',
-                      fontSize: '13px',
-                    }}
+                    style={{ padding: '8px 18px', fontSize: '13px', borderRadius: 'var(--radius-md)' }}
                   >
-                    <Send size={14} />
-                    <span>{submitting ? 'Posting...' : 'Post'}</span>
+                    {submitting ? 'Posting…' : (
+                      <><Send size={13} /> Post</>
+                    )}
                   </button>
                 </div>
               </div>
@@ -240,17 +224,19 @@ export default function Home() {
         </div>
       )}
 
-      {/* Feed list */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: '24px' }}>
+      {/* ── Thread Feed ── */}
+      <div>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--accent)' }}>
-            Loading feeds...
+          <div style={{ padding: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+            <div className="spinner" />
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Loading feed…</span>
           </div>
         ) : threads.length === 0 ? (
-          <div style={{ padding: '80px 0', textAlign: 'center' }}>
-            <span style={{ fontSize: '15px', color: 'var(--text-muted)' }}>
-              Belum ada thread. Jadilah yang pertama memposting!
-            </span>
+          <div style={{ padding: '80px 24px', textAlign: 'center' }}>
+            <Flame size={40} color="var(--primary)" fill="var(--primary)" style={{ margin: '0 auto 12px', opacity: 0.4 }} />
+            <p style={{ fontSize: '16px', color: 'var(--text-muted)', margin: 0 }}>
+              No threads yet. Be the first to post!
+            </p>
           </div>
         ) : (
           threads.map((thread) => (

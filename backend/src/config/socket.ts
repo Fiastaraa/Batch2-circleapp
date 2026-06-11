@@ -30,3 +30,12 @@ export const broadcastNewThread = (thread: any) => {
     console.log('[WebSocket Warning] IO server belum diinisialisasi.');
   }
 };
+
+export const broadcastNewReply = (reply: any) => {
+  if (io) {
+    console.log('[WebSocket Broadcast] Mengirim notifikasi reply baru ke semua client.');
+    io.emit('replyCreated', reply);
+  } else {
+    console.log('[WebSocket Warning] IO server belum diinisialisasi.');
+  }
+};

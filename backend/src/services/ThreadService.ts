@@ -1,5 +1,5 @@
 import { ThreadRepository } from '../repositories/ThreadRepository';
-import { broadcastNewThread } from '../config/socket';
+import { broadcastNewThread, broadcastNewReply } from '../config/socket';
 import { imageQueue } from '../config/queue';
 import { cache } from '../config/redis';
 
@@ -43,9 +43,9 @@ export class ThreadService {
     return newThread;
   }
 
-  async createReply(userId: string, threadId: string, content: string) {
-    if (!content) {
-      throw new Error('Konten komentar tidak boleh kosong!');
+  async createReply(userId: string, threadId: string, content: string, image?: string | null) {
+    if (!content && !image) {
+      throw new Error('Konten komentar atau gambar wajib diisi!');
     }
 
     // Check if thread exists
@@ -54,11 +54,26 @@ export class ThreadService {
       throw new Error('Thread tidak ditemukan!');
     }
 
-    return threadRepository.createReply({
+    const reply = await threadRepository.createReply({
       content,
+      image,
       threadId,
       userId,
     });
+
+    // WebSocket Broadcast: beri tahu semua client real-time
+    broadcastNewReply(reply);
+
+    // Message Queue: jika ada gambar, masukkan ke background queue
+    if (image) {
+      imageQueue.addJob(image, userId);
+    }
+
+    // Invalidate Cache "My Threads"
+    await cache.del(`user-threads:${thread.userId}`);
+    await cache.del(`user-threads:${userId}`);
+
+    return reply;
   }
 
   async toggleLike(userId: string, threadId: string) {
@@ -72,10 +87,14 @@ export class ThreadService {
     if (existingLike) {
       // Unlike
       await threadRepository.removeLike(userId, threadId);
+      await cache.del(`user-threads:${thread.userId}`);
+      await cache.del(`user-threads:${userId}`);
       return { liked: false, message: 'Unliked successfully' };
     } else {
       // Like
       await threadRepository.addLike(userId, threadId);
+      await cache.del(`user-threads:${thread.userId}`);
+      await cache.del(`user-threads:${userId}`);
       return { liked: true, message: 'Liked successfully' };
     }
   }

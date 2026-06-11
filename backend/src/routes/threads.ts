@@ -110,7 +110,7 @@ router.get('/threads/:id', authenticateToken as any, (req, res) => threadControl
  *       401:
  *         description: Unauthorized
  */
-router.post('/threads/:id/reply', authenticateToken as any, (req, res) => threadController.createReply(req, res));
+router.post('/threads/:id/reply', authenticateToken as any, upload.single('image'), (req, res) => threadController.createReply(req, res));
 
 /**
  * @openapi

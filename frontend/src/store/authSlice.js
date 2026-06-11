@@ -1,11 +1,13 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const token = localStorage.getItem('token');
+const savedTheme = localStorage.getItem('theme') || 'dark';
 
 const initialState = {
   user: null,
   token: token || null,
   isAuthenticated: !!token,
+  theme: savedTheme,
   loading: false,
   error: null,
 };
@@ -41,6 +43,11 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       localStorage.removeItem('token');
     },
+    toggleTheme: (state) => {
+      state.theme = state.theme === 'light' ? 'dark' : 'light';
+      localStorage.setItem('theme', state.theme);
+      document.documentElement.setAttribute('data-theme', state.theme);
+    },
   },
 });
 
@@ -51,6 +58,7 @@ export const {
   setProfile,
   updateProfileSuccess,
   logout,
+  toggleTheme,
 } = authSlice.actions;
 
 export default authSlice.reducer;

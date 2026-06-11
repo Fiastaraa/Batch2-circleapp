@@ -57,8 +57,9 @@ export class ThreadController {
 
       const { id: threadId } = req.params;
       const { content } = req.body;
+      const image = req.file ? `/uploads/${req.file.filename}` : null;
 
-      const reply = await threadService.createReply(userId, threadId, content);
+      const reply = await threadService.createReply(userId, threadId, content, image);
       res.status(201).json({
         message: 'Balasan berhasil dikirim!',
         reply,

@@ -150,7 +150,7 @@ export class ThreadRepository {
   }
 
   // === REPLIES ===
-  async createReply(data: { content: string; threadId: string; userId: string }) {
+  async createReply(data: { content: string; image?: string | null; threadId: string; userId: string }) {
     return prisma.reply.create({
       data,
       include: {

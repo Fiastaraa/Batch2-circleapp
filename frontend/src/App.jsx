@@ -8,6 +8,7 @@ import api from './services/api';
 // Components & Pages
 import Sidebar from './components/Sidebar';
 import RightBar from './components/RightBar';
+import MobileNav from './components/MobileNav';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -16,7 +17,7 @@ import Profile from './pages/Profile';
 import Follows from './pages/Follows';
 import Search from './pages/Search';
 
-// Wrapper Layout untuk Halaman Terproteksi
+// ── Protected Layout with sidebar + rightbar ──────────────────────────────────
 function ProtectedLayout() {
   const { isAuthenticated } = useSelector((state) => state.auth);
 
@@ -25,51 +26,62 @@ function ProtectedLayout() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
+    <div style={{
+      minHeight: '100vh',
+      width: '100%',
+      backgroundColor: 'var(--bg-darkest)',
+      display: 'flex',
+      justifyContent: 'center',
+    }}>
+      <div style={{
         width: '100%',
-        backgroundColor: '#15090b',
+        maxWidth: '1280px',
         display: 'flex',
-        justifyContent: 'center',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '1200px',
-          borderLeft: '1px solid var(--border-light)',
-          borderRight: '1px solid var(--border-light)',
-          display: 'flex',
-        }}
-      >
-        {/* Sidebar Kiri */}
-        <Sidebar />
+        position: 'relative',
+      }}>
 
-        {/* Konten Halaman Tengah */}
+        {/* ── Left Sidebar (desktop only) ── */}
+        <div className="desktop-sidebar">
+          <Sidebar />
+        </div>
+
+        {/* ── Main Feed Column ── */}
         <div
+          className="main-content"
           style={{
             flex: 1,
-            borderRight: '1px solid var(--border-light)',
+            borderLeft: '1px solid var(--border)',
+            borderRight: '1px solid var(--border)',
             minHeight: '100vh',
             overflowY: 'auto',
+            /* max-width keeps content readable */
+            maxWidth: '680px',
           }}
         >
           <Outlet />
         </div>
 
-        {/* Sidebar Kanan */}
-        <RightBar />
+        {/* ── Right Sidebar (desktop only ≥ 1024px) ── */}
+        <div className="desktop-rightbar">
+          <RightBar />
+        </div>
       </div>
+
+      {/* ── Mobile Bottom Nav ── */}
+      <MobileNav />
     </div>
   );
 }
 
-// App Content dengan inisialisasi state user profile
+// ── App Content with session initialisation ───────────────────────────────────
 function AppContent() {
   const dispatch = useDispatch();
-  const { token, isAuthenticated } = useSelector((state) => state.auth);
+  const { token, isAuthenticated, theme } = useSelector((state) => state.auth);
   const [initializing, setInitializing] = useState(true);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     const initApp = async () => {
@@ -84,45 +96,34 @@ function AppContent() {
       }
       setInitializing(false);
     };
-
     initApp();
   }, [token, isAuthenticated, dispatch]);
 
   if (initializing) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          backgroundColor: '#15090b',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--accent)',
-          fontSize: '16px',
-          fontWeight: '600',
-        }}
-      >
-        Loading Session...
+      <div className="loading-page">
+        <div className="spinner" />
+        <span>Loading session…</span>
       </div>
     );
   }
 
   return (
     <Routes>
-      {/* Public Routes */}
-      <Route path="/login" element={<Login />} />
+      {/* Public */}
+      <Route path="/login"    element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* Protected Routes */}
+      {/* Protected */}
       <Route element={<ProtectedLayout />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/thread/:id" element={<ThreadDetail />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/follows" element={<Follows />} />
-        <Route path="/search" element={<Search />} />
+        <Route path="/"            element={<Home />} />
+        <Route path="/thread/:id"  element={<ThreadDetail />} />
+        <Route path="/profile"     element={<Profile />} />
+        <Route path="/follows"     element={<Follows />} />
+        <Route path="/search"      element={<Search />} />
       </Route>
 
-      {/* Fallback redirect */}
+      {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
