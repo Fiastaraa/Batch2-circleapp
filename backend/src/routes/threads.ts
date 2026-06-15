@@ -133,4 +133,7 @@ router.post('/threads/:id/reply', authenticateToken as any, upload.single('image
  */
 router.post('/threads/:id/like', authenticateToken as any, (req, res) => threadController.toggleLike(req, res));
 
+router.put('/threads/:id', authenticateToken as any, (req, res) => threadController.updateThread(req, res));
+router.delete('/threads/:id', authenticateToken as any, (req, res) => threadController.deleteThread(req, res));
+
 export default router;

@@ -82,11 +82,23 @@ export class AuthService {
     return user;
   }
 
-  async searchUsers(query: string) {
-    return userRepository.searchUsers(query);
+  async searchUsers(query: string, excludeUserId?: string) {
+    return userRepository.searchUsers(query, excludeUserId);
   }
 
   async updateProfile(userId: string, data: { fullName?: string; bio?: string; avatar?: string }) {
     return userRepository.updateProfile(userId, data);
+  }
+
+  async getUserProfile(targetUserId: string, currentUserId: string) {
+    const targetUser = await userRepository.findById(targetUserId);
+    if (!targetUser) {
+      throw new Error('User tidak ditemukan!');
+    }
+    const isFollowing = await userRepository.isFollowing(currentUserId, targetUserId);
+    return {
+      ...targetUser,
+      isFollowing,
+    };
   }
 }

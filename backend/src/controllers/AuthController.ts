@@ -46,13 +46,10 @@ export class AuthController {
 
   async search(req: AuthRequest, res: Response) {
     try {
-      const query = req.query.query as string;
-      if (!query) {
-        res.status(200).json([]);
-        return;
-      }
-
-      const users = await authService.searchUsers(query);
+      const query = (req.query.query as string) || '';
+      const excludeUserId = req.user?.userId;
+      
+      const users = await authService.searchUsers(query, excludeUserId);
       res.status(200).json(users);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -81,6 +78,21 @@ export class AuthController {
         message: 'Profil berhasil diperbarui!',
         user: updatedUser,
       });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async getUserProfile(req: AuthRequest, res: Response) {
+    try {
+      const currentUserId = req.user?.userId;
+      if (!currentUserId) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+      const { id: targetUserId } = req.params;
+      const profile = await authService.getUserProfile(targetUserId, currentUserId);
+      res.status(200).json(profile);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }

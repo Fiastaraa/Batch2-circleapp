@@ -5,7 +5,11 @@ import { app, server } from '../index';
 
 // Close server after all tests to prevent open handle warnings
 afterAll((done) => {
-  server.close(done);
+  if (server.listening) {
+    server.close(done);
+  } else {
+    done();
+  }
 });
 
 // ==========================================

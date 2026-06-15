@@ -123,6 +123,6 @@ router.put('/profile/update', authenticateToken as any, upload.single('avatar'),
  *       200:
  *         description: Daftar user yang cocok
  */
-router.get('/users/search', (req, res) => authController.search(req, res));
+router.get('/users/search', authenticateToken as any, (req, res) => authController.search(req, res));
 
 export default router;

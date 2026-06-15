@@ -42,13 +42,24 @@ app.get('/', (req: Request, res: Response) => {
 // ===== MOUNT API ROUTES =====
 app.use('/api', apiRouter);
 
-// Jalankan Server HTTP
-server.listen(PORT, () => {
-  console.log(`
-  ==========================================
-  🚀 Server berjalan di http://localhost:${PORT}
-  📑 Dokumentasi API di http://localhost:${PORT}/api-docs
-  ==========================================
-  `);
+// Global Error Handling Middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('🔥 Global Error:', err);
+  const statusCode = err.status || err.statusCode || 500;
+  res.status(statusCode).json({
+    error: err.message || 'Terjadi kesalahan internal pada server!'
+  });
 });
+
+// Jalankan Server HTTP jika tidak sedang running di test environment
+if (process.env.NODE_ENV !== 'test') {
+  server.listen(PORT, () => {
+    console.log(`
+    ==========================================
+    🚀 Server berjalan di http://localhost:${PORT}
+    📑 Dokumentasi API di http://localhost:${PORT}/api-docs
+    ==========================================
+    `);
+  });
+}
 export { app, server };

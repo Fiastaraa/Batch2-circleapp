@@ -38,6 +38,7 @@ export class ThreadRepository {
           select: { id: true },
         },
         likes: {
+          where: { userId: currentUserId || '' },
           select: { userId: true },
         },
         _count: {
@@ -48,13 +49,12 @@ export class ThreadRepository {
         },
       },
       orderBy: { createdAt: 'desc' },
+      take: 100,
     });
 
     // Petakan data agar sesuai format FE (menambahkan field isLiked)
     return threads.map((thread) => {
-      const isLiked = currentUserId
-        ? thread.likes.some((like) => like.userId === currentUserId)
-        : false;
+      const isLiked = currentUserId ? thread.likes.length > 0 : false;
       const { likes, ...threadData } = thread;
       return {
         ...threadData,
@@ -76,6 +76,7 @@ export class ThreadRepository {
           },
         },
         likes: {
+          where: { userId: currentUserId || '' },
           select: { userId: true },
         },
         replies: {
@@ -102,9 +103,7 @@ export class ThreadRepository {
 
     if (!thread) return null;
 
-    const isLiked = currentUserId
-      ? thread.likes.some((like) => like.userId === currentUserId)
-      : false;
+    const isLiked = currentUserId ? thread.likes.length > 0 : false;
     const { likes, ...threadData } = thread;
     return {
       ...threadData,
@@ -125,6 +124,7 @@ export class ThreadRepository {
           },
         },
         likes: {
+          where: { userId: currentUserId || '' },
           select: { userId: true },
         },
         _count: {
@@ -138,9 +138,7 @@ export class ThreadRepository {
     });
 
     return threads.map((thread) => {
-      const isLiked = currentUserId
-        ? thread.likes.some((like) => like.userId === currentUserId)
-        : false;
+      const isLiked = currentUserId ? thread.likes.length > 0 : false;
       const { likes, ...threadData } = thread;
       return {
         ...threadData,
@@ -186,6 +184,19 @@ export class ThreadRepository {
       where: {
         userId_threadId: { userId, threadId },
       },
+    });
+  }
+
+  async update(id: string, content: string) {
+    return prisma.thread.update({
+      where: { id },
+      data: { content },
+    });
+  }
+
+  async delete(id: string) {
+    return prisma.thread.delete({
+      where: { id },
     });
   }
 }

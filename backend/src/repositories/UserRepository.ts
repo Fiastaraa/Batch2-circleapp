@@ -34,14 +34,19 @@ export class UserRepository {
     });
   }
 
-  async searchUsers(query: string) {
+  async searchUsers(query: string, excludeUserId?: string) {
+    const whereClause: any = {};
+    if (query) {
+      whereClause.OR = [
+        { username: { contains: query, mode: 'insensitive' } },
+        { fullName: { contains: query, mode: 'insensitive' } },
+      ];
+    }
+    if (excludeUserId) {
+      whereClause.id = { not: excludeUserId };
+    }
     return prisma.user.findMany({
-      where: {
-        OR: [
-          { username: { contains: query, mode: 'insensitive' } },
-          { fullName: { contains: query, mode: 'insensitive' } },
-        ],
-      },
+      where: whereClause,
       select: {
         id: true,
         username: true,
@@ -66,5 +71,14 @@ export class UserRepository {
         avatar: true,
       },
     });
+  }
+
+  async isFollowing(followerId: string, followingId: string) {
+    const record = await prisma.following.findUnique({
+      where: {
+        followerId_followingId: { followerId, followingId },
+      },
+    });
+    return !!record;
   }
 }

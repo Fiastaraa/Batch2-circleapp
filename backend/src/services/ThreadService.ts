@@ -24,7 +24,7 @@ export class ThreadService {
     }
 
     const newThread = await threadRepository.create({
-      content,
+      content: content || '',
       image,
       userId,
     });
@@ -124,5 +124,44 @@ export class ThreadService {
       source: 'database',
       data: threads,
     };
+  }
+
+  async updateThread(userId: string, threadId: string, content: string) {
+    const thread = await threadRepository.findById(threadId);
+    if (!thread) {
+      throw new Error('Thread tidak ditemukan!');
+    }
+    if (thread.userId !== userId) {
+      throw new Error('Anda tidak memiliki akses untuk mengedit thread ini!');
+    }
+    if (!content) {
+      throw new Error('Konten thread wajib diisi!');
+    }
+    const updated = await threadRepository.update(threadId, content);
+    
+    // Invalidate Cache
+    await cache.del(`user-threads:${userId}`);
+    
+    return updated;
+  }
+
+  async deleteThread(userId: string, threadId: string) {
+    const thread = await threadRepository.findById(threadId);
+    if (!thread) {
+      throw new Error('Thread tidak ditemukan!');
+    }
+    if (thread.userId !== userId) {
+      throw new Error('Anda tidak memiliki akses untuk menghapus thread ini!');
+    }
+    await threadRepository.delete(threadId);
+    
+    // Invalidate Cache
+    await cache.del(`user-threads:${userId}`);
+    
+    return { message: 'Thread berhasil dihapus!' };
+  }
+
+  async getUserThreads(targetUserId: string, currentUserId?: string) {
+    return threadRepository.findByUserId(targetUserId, currentUserId);
   }
 }

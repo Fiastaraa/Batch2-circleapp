@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { followController } from '../controllers/FollowController';
+import { authController } from '../controllers/AuthController';
+import { threadController } from '../controllers/ThreadController';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
@@ -46,5 +48,8 @@ router.post('/users/:id/follow', authenticateToken as any, (req, res) => followC
  *         description: Unauthorized
  */
 router.get('/users/follows', authenticateToken as any, (req, res) => followController.getFollowList(req, res));
+
+router.get('/users/:id', authenticateToken as any, (req, res) => authController.getUserProfile(req, res));
+router.get('/users/:id/threads', authenticateToken as any, (req, res) => threadController.getUserThreads(req, res));
 
 export default router;

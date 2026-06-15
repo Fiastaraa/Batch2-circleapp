@@ -99,5 +99,51 @@ export class ThreadController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  async updateThread(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+      const { id: threadId } = req.params;
+      const { content } = req.body;
+      const updatedThread = await threadService.updateThread(userId, threadId, content);
+      res.status(200).json({
+        message: 'Thread berhasil diperbarui!',
+        thread: updatedThread,
+      });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async deleteThread(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+      const { id: threadId } = req.params;
+      const result = await threadService.deleteThread(userId, threadId);
+      res.status(200).json(result);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async getUserThreads(req: AuthRequest, res: Response) {
+    try {
+      const currentUserId = req.user?.userId;
+      const { id: targetUserId } = req.params;
+      
+      const threads = await threadService.getUserThreads(targetUserId, currentUserId);
+      res.status(200).json(threads);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
 }
 export const threadController = new ThreadController();
