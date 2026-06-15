@@ -603,16 +603,148 @@
     }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+    /* Sidebar overlay backdrop */
+    .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 400;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .sidebar-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Scrollable suggestions container */
+    #rb-suggestions {
+      max-height: 260px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    #rb-suggestions::-webkit-scrollbar {
+      width: 4px;
+    }
+    #rb-suggestions::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #rb-suggestions::-webkit-scrollbar-thumb {
+      background: var(--border-strong);
+      border-radius: var(--r-pill);
+    }
+    #rb-suggestions::-webkit-scrollbar-thumb:hover {
+      background: var(--accent);
+    }
+
+    /* Rightbar profile card menu dropdown styles */
+    .profile-menu-container {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 10;
+    }
+    .profile-dropdown-menu {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 32px;
+      width: 160px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-md);
+      box-shadow: 0 8px 24px var(--shadow);
+      overflow: hidden;
+      z-index: 20;
+    }
+    .profile-dropdown-menu.show {
+      display: block;
+      animation: fadeIn 0.15s ease forwards;
+    }
+    .dropdown-item {
+      width: 100%;
+      text-align: left;
+      padding: 10px 14px;
+      background: transparent;
+      border: none;
+      color: var(--text-med);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--sans);
+      transition: var(--transition);
+    }
+    .dropdown-item:hover {
+      background: var(--bg-hover-overlay-strong) !important;
+      color: var(--text);
+    }
+    .dropdown-item.danger {
+      color: var(--like);
+    }
+    .dropdown-item.danger:hover {
+      background: rgba(255, 77, 109, 0.08) !important;
+      color: var(--like);
+    }
+
+    /* Header toggle menu button styles */
+    .mobile-menu-btn {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      cursor: pointer;
+      padding: 4px;
+      align-items: center;
+      justify-content: center;
+    }
+    .mobile-menu-btn .avatar {
+      border-width: 1.5px;
+      transition: var(--transition);
+    }
+    .mobile-menu-btn:hover .avatar {
+      transform: scale(1.05);
+      border-color: var(--accent);
+    }
+    .mobile-header-bar {
+      display: none;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+    }
+
     /* ══════════════════════════════════════════
        RESPONSIVE
     ══════════════════════════════════════════ */
     @media (max-width: 1024px) { #rightbar { display: none; } }
     @media (max-width: 768px) {
-      #sidebar { display: none; }
+      #sidebar {
+        position: fixed !important;
+        top: 0;
+        left: -280px;
+        width: 280px;
+        height: 100vh;
+        z-index: 500;
+        background: var(--bg-sidebar);
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex !important;
+        box-shadow: 4px 0 24px var(--shadow);
+      }
+      #sidebar.open {
+        left: 0;
+      }
       #mobile-nav { display: flex; }
       #feed-col { max-width: 100%; border-right: none; padding-bottom: 68px; }
       .auth-left { display: none; }
       #auth-screen { flex-direction: column; }
+      .mobile-menu-btn { display: inline-flex; }
+      .mobile-header-bar { display: flex; }
     }
     @media (max-width: 480px) {
       .thread-card { padding: 12px 14px; }
@@ -733,6 +865,8 @@
 
 <!-- ══ MAIN APP ════════════════════════════════ -->
 <div id="main-app">
+  <!-- ══ SIDEBAR OVERLAY ════════════════════════ -->
+  <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar(false)"></div>
 
   <!-- ── LEFT SIDEBAR ── -->
   <aside id="sidebar">
@@ -790,6 +924,9 @@
       <div class="glass-header">
         <div class="feed-header">
           <div style="display:flex;align-items:center;gap:8px">
+            <button class="mobile-menu-btn" onclick="toggleSidebar(true)" title="Menu">
+              <img class="avatar header-mobile-avatar" src="" width="30" height="30" />
+            </button>
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" stroke-width="0"><path d="M12 2c.7 1.5 1 3 .5 4.5C14.5 5 16 3.5 16 3.5S15 8 12.5 9C15 9.5 17 8 17 8s-1 5-5 6c.3-.8.5-1.7.5-2.5C10 14 8 16 8 19c0 2.2 1.8 4 4 4 3.3 0 6-2.7 6-6 0-3-1.5-5.5-4-7 .5 1 .5 2 0 3-1-2-2.5-3.5-2-9z"/></svg>
             <span class="feed-title">For You</span>
           </div>
@@ -872,7 +1009,12 @@
     <!-- PAGE: SEARCH -->
     <section id="page-search" class="page">
       <div class="glass-header" style="padding:14px 20px">
-        <span style="font-size:17px;font-weight:800;letter-spacing:-0.3px;display:block;margin-bottom:12px">Search</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <button class="mobile-menu-btn" onclick="toggleSidebar(true)" title="Menu">
+            <img class="avatar header-mobile-avatar" src="" width="30" height="30" />
+          </button>
+          <span style="font-size:17px;font-weight:800;letter-spacing:-0.3px">Search</span>
+        </div>
         <div class="search-wrap">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input id="search-query" class="search-input" placeholder="Search by name or username…" oninput="debounceSearch(this.value)" />
@@ -889,6 +1031,12 @@
     <!-- PAGE: FOLLOWS -->
     <section id="page-follows" class="page">
       <div class="glass-header">
+        <div class="mobile-header-bar">
+          <button class="mobile-menu-btn" onclick="toggleSidebar(true)" title="Menu">
+            <img class="avatar header-mobile-avatar" src="" width="30" height="30" />
+          </button>
+          <span style="font-size:17px;font-weight:800;letter-spacing:-0.3px">Follows</span>
+        </div>
         <div class="tab-bar">
           <button class="tab-btn active" id="tab-followers" onclick="switchFollowTab(0)">Followers <span id="followers-count" style="font-size:12px;font-weight:700;color:var(--accent)"></span></button>
           <button class="tab-btn" id="tab-following" onclick="switchFollowTab(1)">Following <span id="following-count" style="font-size:12px;font-weight:700;color:var(--text-faint)"></span></button>
@@ -899,7 +1047,10 @@
 
     <!-- PAGE: PROFILE -->
     <section id="page-profile" class="page">
-      <div class="glass-header" style="padding:15px 20px">
+      <div class="glass-header" style="padding:15px 20px;display:flex;align-items:center;gap:8px">
+        <button class="mobile-menu-btn" onclick="toggleSidebar(true)" title="Menu">
+          <img class="avatar header-mobile-avatar" src="" width="30" height="30" />
+        </button>
         <span style="font-size:17px;font-weight:800;letter-spacing:-0.3px">Profile</span>
       </div>
 
@@ -951,7 +1102,22 @@
     <!-- Profile card -->
     <div class="profile-card">
       <div class="profile-card-cover"></div>
-      <div class="profile-card-body">
+      <div class="profile-card-body" style="position:relative">
+        <div class="profile-menu-container">
+          <button class="btn-ghost" onclick="toggleProfileDropdown(event)" style="padding:6px;border-radius:50%;color:var(--text-muted);background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center" title="Options">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+          </button>
+          <div id="profile-dropdown-menu" class="profile-dropdown-menu">
+            <button class="dropdown-item" onclick="openEditModal(); toggleProfileDropdown(event)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              Setting Account
+            </button>
+            <button class="dropdown-item danger" onclick="handleLogout(); toggleProfileDropdown(event)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Log Out
+            </button>
+          </div>
+        </div>
         <img id="rb-avatar" class="avatar profile-card-avatar" src="" width="52" height="52" />
         <div class="profile-card-name" id="rb-name">—</div>
         <div class="profile-card-handle" id="rb-handle">@—</div>
@@ -1363,6 +1529,11 @@ async function refreshCurrentUserProfile() {
     state.currentUser = reduxStore.getState().profile;
     localStorage.setItem('circle_user', JSON.stringify(state.currentUser));
     updateRightbar();
+    
+    // Update mobile menu header avatars
+    document.querySelectorAll('.header-mobile-avatar').forEach(img => {
+      img.src = avatarUrl(state.currentUser);
+    });
   } catch (err) {
     console.error('Failed to refresh current user profile:', err);
   }
@@ -1380,6 +1551,11 @@ function initApp() {
   document.getElementById('sidebar-handle').textContent = '@' + cu.username;
   document.getElementById('compose-avatar').src = avatarUrl(cu);
   document.getElementById('reply-avatar').src = avatarUrl(cu);
+
+  // Load mobile menu header avatars
+  document.querySelectorAll('.header-mobile-avatar').forEach(img => {
+    img.src = avatarUrl(cu);
+  });
 
   updateRightbar();
   loadFollowingIds().then(() => {
@@ -1441,8 +1617,46 @@ function clearNewBadge() {
   loadFeed();
 }
 
+/* ── SIDEBAR DRAWER TOGGLE ───────────────────────── */
+function toggleSidebar(open) {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (sidebar && overlay) {
+    if (open) {
+      sidebar.classList.add('open');
+      overlay.classList.add('active');
+    } else {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+    }
+  }
+}
+
+/* ── PROFILE OPTIONS DROPDOWN ────────────────────── */
+function toggleProfileDropdown(event) {
+  if (event) event.stopPropagation();
+  const dropdown = document.getElementById('profile-dropdown-menu');
+  if (dropdown) {
+    dropdown.classList.toggle('show');
+  }
+}
+
+// Window click listener to close dropdown when clicking outside
+window.addEventListener('click', (e) => {
+  const dropdown = document.getElementById('profile-dropdown-menu');
+  if (dropdown && dropdown.classList.contains('show')) {
+    // Only close if we didn't click the options button or inside the dropdown
+    if (!e.target.closest('.profile-menu-container')) {
+      dropdown.classList.remove('show');
+    }
+  }
+});
+
 /* ── NAVIGATION ──────────────────────────────────── */
 function navigate(page, id) {
+  // Always close mobile sidebar when navigating
+  toggleSidebar(false);
+
   ['home','detail','search','follows','profile'].forEach(p => {
     document.getElementById('page-'+p).classList.remove('active');
   });
